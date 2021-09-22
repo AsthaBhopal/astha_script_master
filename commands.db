@@ -1,0 +1,109 @@
+CREATE INDEX idx_symbol_sp_op ON option_data("symbol", "nStrikePrice1", "sOptionType");
+
+
+SELECT * FROM option_data WHERE "sSymbol"= "NIFTY"
+
+
+ALTER TABLE "option_data" RENAME TO "option_data_new";
+
+select * from option_data 
+left join equity_data on equity_data.sSymbol=option_data.sSymbol limit 10000;
+
+
+select * from option_data 
+left join equity_data on equity_data.ssymbol = option_data.ssymbol limit 10000;
+
+
+
+
+UPDATE option_data SET sisincode = s.sisincode
+FROM equity_data AS s 
+WHERE option_data.ssymbol = s.ssymbol;
+
+
+idx_symbol_sp_op
+
+
+-- CREATE INDEX idx_symbol_sp_op ON option_data("ssymbol", "nStrikePrice1", "sOptionType");
+-- DROP INDEX idx_symbol_sp_op;
+
+
+>> TS VECTOR
+
+1 * CREATE COLUMN - 
+ALTER TABLE option_data
+ ADD COLUMN tsv tsvector
+UPDATE option_data
+SET tsv = to_tsvector(symbol || ' ' || strike_price || ' ' || option_type || ' ' || expiry_date)
+
+Q - 
+SELECT 	symbol , instrument_name, security_desc, expiry_date, strike_price, option_type, market_segment_id, token, isin_code
+from option_data
+where tsv @@ to_tsquery('RELIANCE')
+
+2 * CREATE INDEX -
+ALTER TABLE option_data
+ ADD COLUMN tsv_idx tsvector;
+UPDATE option_data
+SET tsv_idx = to_tsvector(symbol || ' ' || strike_price || ' ' || option_type || ' ' || expiry_date);
+
+CREATE INDEX tsv_idx
+ ON option_data
+ USING GIN(tsv_idx);
+
+Q - 
+SELECT 	symbol , instrument_name, security_desc, expiry_date, strike_price, option_type, market_segment_id, token, isin_code
+FROM option_data_t
+where tsv_idx @@ to_tsquery('RELIANCE 13000 OCT')
+
+
+3 * SET WEIGHT - 
+ALTER TABLE option_data
+    ADD COLUMN tsv_weights = setweight(to_tsvector(symbol), 'A') || 
+    setweight(to_tsvector(strike_price), 'B') || setweight(to_tsvector(option_type), 'C') || setweight(to_tsvector(expiry_date), 'D')
+
+
+
+
+
+>> TS VECTOR TEST <<
+
+t1 -
+ALTER TABLE option_data_t
+ ADD COLUMN tsv tsvector;
+UPDATE option_data_t
+SET tsv = to_tsvector(symbol || ' ' || strike_price || ' ' || option_type || ' ' || expiry_date);
+
+
+2-
+SELECT * 
+FROM option_data
+WHERE tsv @@ ts_tsquery('RELIANCE 124000 CE')
+
+
+SELECT *
+from option_data_t
+where to_tsvector(symbol || ' ' || strike_price || ' ' || option_type || ' ' || expiry_date) @@ to_tsquery('RELIANCE OCT')
+
+SELECT symbol, strike_price, option_type, expiry_date
+from option_data_t
+where to_tsvector(symbol || ' ' || strike_price || ' ' || option_type || ' ' || expiry_date) @@ to_tsquery('RELIANCE');
+
+
+
+
+
+
+
+====================================INDEX======================================>
+CREATE INDEX option_data_idx_symbol_strikeprice_optiontype_expirydate ON option_data(symbol, strike_price, option_type, expiry_date);
+
+CREATE INDEX option_data_idx_symbol_strikeprice_optiontype ON option_data(symbol, strike_price, option_type);
+
+CREATE INDEX option_data_idx_symbol_strikeprice_expirydate ON option_data(symbol, strike_price, expiry_date);
+
+CREATE INDEX option_data_idx_symbol_optiontype_expirydate ON option_data(symbol, option_type, expiry_date);
+
+
+CREATE INDEX option_data_idx_symbol_strikeprice ON option_data(symbol, strike_price);
+
