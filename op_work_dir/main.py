@@ -110,7 +110,7 @@ except Exception as E:
 
 try:
     new_df.to_sql(name = 'option_data_t', con = engine, index=False, dtype=dtype)
-
+    db.execute("UPDATE option_data_t SET isin_code = s.isin_code FROM equity_data AS s WHERE option_data_t.symbol = s.symbol;")
     db.execute("ALTER TABLE option_data_t ADD COLUMN tsv_idx tsvector;")
     db.execute("UPDATE option_data_t SET tsv_idx = to_tsvector(symbol || ' ' || strike_price || ' ' || option_type || ' ' || expiry_date);")
     db.execute("CREATE INDEX tsv_idx ON option_data_t USING GIN(tsv_idx);")
